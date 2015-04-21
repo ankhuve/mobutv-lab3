@@ -10,31 +10,40 @@ var pubnub = PUBNUB.init({
   subscribe_key : "sub-c-4d90db16-e50a-11e4-8370-0619f8945a4f"
 });
 
+pubnub.subscribe({
+	'channel'   : 'tasty-chat',
+	connect: console.log("Ansluten till chatten."),
+	'callback'  : function(message) {
+		output.html(output.html() + '<br />' + message);
+	}
+});
 
-var getLocation = function() {
+var sendMessageWithPos = function() {
     if (navigator.geolocation) {
-    	navigator.geolocation.getCurrentPosition(returnPosition, showError);
+    	navigator.geolocation.getCurrentPosition(locationMessage, showError);
         // navigator.geolocation.getCurrentPosition(setPosition, showError);
     } else { 
         alert("Geolocation is not supported by this browser.");
     }
 }
 
-var returnPosition = function(position) {
-	console.log("Got position: lon " + position.coords.longitude + " lat " + position.coords.latitude)
-	return position;
-}
+var locationMessage = function(position) {
+	console.log("Skickar: " + $("#input").val());
+	console.log("Från position: lon " + position.coords.longitude + " lat " + position.coords.latitude)
+    // send messages
+	pubnub.publish({
+		'channel' : 'tasty-chat',
+		'message' : $("#input").val(),
+		'pos'     : position
+	});
+};
+
 
 // Get location of device
-var pos = getLocation();
+// var pos = getLocation();
 
 
-pubnub.subscribe({
-	'channel'   : 'tasty-chat',
-	'callback'  : function(message, pos) {
-		output.html(output.html() + '<br />' + message + "<br/> long: " + pos.longitude + " lat: " + pos.latitude);
-	}
-});
+
 
 
 
