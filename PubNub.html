@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en" hola_ext_inject="ready"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html lang="en" hola_ext_inject="ready">
   <head>
-    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" minimal-ui>
     <meta name="mobile-web-app-capable" content="yes">
@@ -31,19 +31,17 @@
     <script src="./PubNub_files/pubnub-3.4.min.js"></script><style type="text/css"></style>
     <!-- Pubnub credentials -->
     <!-- <script src="./PubNub_files/cred.js"></script> -->
-    <script src="js/appCtrl.js"></script>
-    <!-- <script type="text/javascript" src="js/appCtrl.js"></script> -->
+    <script src="js/pubNubInitialize.js"></script>
     <title>Suck My PubNub</title>
   </head>
-  
-</head>
-
 <body hola-ext-player="1">
   <div class="container">
     <input class="input-block-level" type="text" placeholder="Enter chat here" id="input">
-    <button id="buttonSend" class="btn" onclick="sendMessages()">Send</button>
-    <button id="buttonHistory" class="btn" onclick="recieveHistory()">History</button>
-    <div id="output" style="margin-top:10px"></div>
+    <div class="buttons">
+      <button id="buttonSend" class="btn btn-primary" onclick="sendMessages()">Send</button>
+      <button id="buttonHistory" class="btn btn-warning" onclick="recieveHistory()">History</button>
+    </div>
+    <div id="output"></div>
   </div>
 
 </body></html>
