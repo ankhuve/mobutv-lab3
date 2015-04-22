@@ -4,6 +4,8 @@ var pubnub = PUBNUB.init({
   subscribe_key : "sub-c-4d90db16-e50a-11e4-8370-0619f8945a4f"
 });
 
+var uuid = pubnub.uuid();
+
 var loading = true;
 $("#output").html("Ansluter till chatten..");
 
@@ -19,10 +21,73 @@ pubnub.subscribe({
       console.log(JSON.stringify(error));
     },
 	callback  : function(message) {
-		$("#output").html($("#output").html() + '<br />' + message);
+        navigator.geolocation.getCurrentPosition(
+            function(position){
+                // Större longitud -> Mer österut
+                // Större latitud -> Mer norrut
+                var messageSentNorth;
+                var messageSentEast;
+                
+                if(message.location.longitude > position.coords.longitude){
+                    messageSentEast = true;
+                } else {
+                    messageSentEast = false;
+                }
+
+                if(message.location.latitude > position.coords.latitude){
+                    messageSentNorth = true;
+                } else {
+                    messageSentNorth = false;
+                }
+
+                var diffLong = position.coords.longitude - message.location.longitude;  // X
+                var diffLat = position.coords.latitude - message.location.latitude;     // Y
+                console.log("Longs: " + position.coords.longitude + " " + message.location.longitude);
+                console.log("Lats: " + position.coords.latitude + " " + message.location.latitude);
+                console.log(diffLat + " " + diffLong);
+                var relativeAngle;
+
+                if(messageSentEast && messageSentNorth){
+                    console.log("nordost");
+                    relativeAngle = Math.atan(diffLong/diffLat) * (180/Math.PI); // Grader
+                    // relativeAngle = Math.atan(diffLong/diffLat);
+                } else if(messageSentEast && !messageSentNorth){
+                    console.log("sydost");
+                    relativeAngle = 90 + Math.atan(diffLat/diffLong) * (180/Math.PI); // Grader
+                    // relativeAngle = Math.PI * 0.5 + Math.atan(diffLat/diffLong);
+                } else if(!messageSentEast && !messageSentNorth){
+                    console.log("sydväst");
+                    relativeAngle = 180 + Math.atan(diffLong/diffLat) * (180/Math.PI); // Grader
+                    // relativeAngle = Math.PI + Math.atan(diffLong/diffLat);
+                } else {
+                    console.log("nordväst");
+                    relativeAngle = 270 + Math.atan(diffLat/diffLong) * (180/Math.PI); // Grader
+                    // relativeAngle = Math.PI * 1.5 + Math.atan(diffLat/diffLong);
+                }
+
+                var angleDifference = (Math.abs((message.location.heading - relativeAngle + 180)) % 360) - 180;
+                console.log(angleDifference);
+                if(Math.abs(angleDifference)<45){
+                    // GO TIME!
+                    console.log("You are looking the right way! Very good, do you like what you see? ");
+                } else {
+                    // Fuck you :(
+                    console.log("Fuck you :(");
+                }
+
+                console.log("Success function callback!");
+                console.log(message);
+                console.log(position);
+            }, showError);
+
         console.log("Fick meddelande: " + JSON.stringify(message));
+        if(getObjectSize(message)>2){
+        	$("#output").html($(
+        		"#output").html() + '<br />' + message.data + "<p class='geoData'>Användaren är vid " + message.location.longitude.toFixed(5) + " " + message.location.latitude.toFixed(5) + " och tittar mot " + message.location.heading + "°</p>");
+        };
     }
 });
+
 
 $(function(){
     $("#input").keyup(function(e){
@@ -42,7 +107,10 @@ var sendMessages = function(){
 	    // send messages
 	    pubnub.publish({
 	        channel : 'tasty-chat',
-	        message : $("#input").val(),
+	        message : {
+	        	data: $("#input").val(),
+	        	uuid: uuid
+        	},
 	        callback: function(){
 	            console.log("Skickade: " + $("#input").val())
 	            $("#input").val("");
@@ -83,8 +151,15 @@ var locationMessage = function(position) {
 	    // send messages
 		pubnub.publish({
 			channel : 'tasty-chat',
-			message : $("#input").val()+" från "+position.coords.longitude+" "+position.coords.latitude,
-			// pos     : position,
+			message : {
+	        	data: $("#input").val(),
+	        	uuid: uuid,
+	        	location: {
+	        		longitude: position.coords.longitude,
+	        		latitude: position.coords.latitude,
+	        		heading: userHeading
+        		}
+        	},
 			callback: function(){
 				console.log("Skickade: " + $("#input").val())
 				$("#input").val("");
@@ -111,4 +186,46 @@ var showError = function(error) {
             alert("An unknown error occurred.");
             break;
     }
+}
+
+var getObjectSize = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+init();
+var count = 0;
+var userHeading = 0;
+
+function init() {
+  if (window.DeviceOrientationEvent) {
+    // Listen for the deviceorientation event and handle the raw data
+    window.addEventListener('deviceorientation', function(eventData) {
+      // // gamma is the left-to-right tilt in degrees, where right is positive
+      // var tiltLR = eventData.gamma;
+      
+      // // beta is the front-to-back tilt in degrees, where front is positive
+      // var tiltFB = eventData.beta;
+      
+      // alpha is the compass direction the device is facing in degrees
+      var dir = eventData.alpha
+      
+      // call our orientation event handler
+      deviceOrientationHandler(dir);
+      }, false);
+  }
+}
+
+function deviceOrientationHandler(dir) {
+  document.getElementById("heading").innerHTML = Math.round(dir);
+  
+  // Apply the transform to the image
+  var logo = document.getElementById("compass");
+  logo.style.webkitTransform = "rotate("+ dir +"deg)";
+  logo.style.MozTransform = "rotate("+ dir +"deg)";
+  logo.style.transform = "rotate("+ dir +"deg)";
+  userHeading = dir;
 }

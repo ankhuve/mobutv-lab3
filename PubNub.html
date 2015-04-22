@@ -32,16 +32,25 @@
     <!-- Pubnub credentials -->
     <!-- <script src="./PubNub_files/cred.js"></script> -->
     <script src="js/appCtrl.js"></script>
+    <!-- <script scr="js/compass.js"></script> -->
     <title>Suck My PubNub</title>
   </head>
 <body hola-ext-player="1">
   <div class="container">
     <input class="input-block-level" type="text" placeholder="Enter chat here" id="input">
     <div class="buttons">
-      <button id="buttonSend" class="btn btn-primary" onclick="sendMessages()">Send</button>
+      <button id="buttonSend" class="btn btn-primary" onclick="sendMessageWithPos()">Send</button>
       <button id="buttonHistory" class="btn btn-warning" onclick="recieveHistory()">History</button>
     </div>
-    <div id="output"></div>
+    <div id="chatAndCompass">
+      <div id="output"></div>
+      <div id="compassContainer">
+        <span id="heading"></span>
+        <img src="img/compass.png" id="compass"/>
+      </div>
+    </div>
+    
+
   </div>
 
 </body></html>
