@@ -25,19 +25,19 @@ pubnub.subscribe({
             function(position){
                 // Större longitud -> Mer österut
                 // Större latitud -> Mer norrut
-                var messageSentNorth;
-                var messageSentEast;
+                var messageSentFromNorth;
+                var messageSentFromEast;
                 
                 if(message.location.longitude > position.coords.longitude){
-                    messageSentEast = true;
+                    messageSentFromEast = true;
                 } else {
-                    messageSentEast = false;
+                    messageSentFromEast = false;
                 }
 
                 if(message.location.latitude > position.coords.latitude){
-                    messageSentNorth = true;
+                    messageSentFromNorth = true;
                 } else {
-                    messageSentNorth = false;
+                    messageSentFromNorth = false;
                 }
 
                 var diffLong = position.coords.longitude - message.location.longitude;  // X
@@ -47,15 +47,16 @@ pubnub.subscribe({
                 console.log(diffLat + " " + diffLong);
                 var relativeAngle;
 
-                if(messageSentEast && messageSentNorth){
+                // Dela upp i kvadranter
+                if(messageSentFromEast && messageSentFromNorth){
                     console.log("nordost");
                     relativeAngle = Math.atan(diffLong/diffLat) * (180/Math.PI); // Grader
                     // relativeAngle = Math.atan(diffLong/diffLat);
-                } else if(messageSentEast && !messageSentNorth){
+                } else if(messageSentFromEast && !messageSentFromNorth){
                     console.log("sydost");
                     relativeAngle = 90 + Math.atan(diffLat/diffLong) * (180/Math.PI); // Grader
                     // relativeAngle = Math.PI * 0.5 + Math.atan(diffLat/diffLong);
-                } else if(!messageSentEast && !messageSentNorth){
+                } else if(!messageSentFromEast && !messageSentFromNorth){
                     console.log("sydväst");
                     relativeAngle = 180 + Math.atan(diffLong/diffLat) * (180/Math.PI); // Grader
                     // relativeAngle = Math.PI + Math.atan(diffLong/diffLat);
@@ -74,8 +75,6 @@ pubnub.subscribe({
                     // Fuck you :(
                     console.log("Fuck you :(");
                 }
-
-                console.log("Success function callback!");
                 console.log(message);
                 console.log(position);
             }, showError);
