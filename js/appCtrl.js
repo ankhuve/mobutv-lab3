@@ -5,132 +5,89 @@ var pubnub = PUBNUB.init({
 });
 
 var uuid = pubnub.uuid();
+var userCardinalDirection = "";
+var messageCount = 0;
+var connectedToAChannel = false;
 
-var loading = true;
+
 $("#output").html("Ansluter till chatten..");
 
-pubnub.subscribe({
-	'channel'   : 'tasty-chat',
-	connect: function(){
-        $("#output").html("Ansluten!<br/>----------------------");
-        loading = false;
-    },
-    error: function (error) {
-      // Handle error here
-      $("#output").html("Kunde inte ansluta till chatten :(");
-      console.log(JSON.stringify(error));
-    },
-	callback  : function(message) {
-        navigator.geolocation.getCurrentPosition(
-            function(position){
-                // Större longitud -> Mer österut
-                // Större latitud -> Mer norrut
-                var messageSentFromNorth;
-                var messageSentFromEast;
-                
-                if(message.location.longitude > position.coords.longitude){
-                    messageSentFromEast = true;
-                } else {
-                    messageSentFromEast = false;
-                }
+var subscribeToChannel = function(direction){
+	pubnub.subscribe({
+		channel   : 'erdick-chat-'+direction,
+		connect: function(){
+			$("#output").html("");
+	    	recieveHistory(direction);
+	    },
+	    error: function (error) {
+	      // Handle error here
+	      $("#output").html("Kunde inte ansluta till chatten :(");
+	      console.log(JSON.stringify(error));
+	    },
+		callback  : function(message) {
+			subscribeCallback(message);
+		}
+	});
+};
 
-                if(message.location.latitude > position.coords.latitude){
-                    messageSentFromNorth = true;
-                } else {
-                    messageSentFromNorth = false;
-                }
-
-                var diffLong = position.coords.longitude - message.location.longitude;  // X
-                var diffLat = position.coords.latitude - message.location.latitude;     // Y
-                console.log("Longs: " + position.coords.longitude + " " + message.location.longitude);
-                console.log("Lats: " + position.coords.latitude + " " + message.location.latitude);
-                console.log(diffLat + " " + diffLong);
-                var relativeAngle;
-
-                // Dela upp i kvadranter
-                if(messageSentFromEast && messageSentFromNorth){
-                    console.log("nordost");
-                    relativeAngle = Math.atan(diffLong/diffLat) * (180/Math.PI); // Grader
-                    // relativeAngle = Math.atan(diffLong/diffLat);
-                } else if(messageSentFromEast && !messageSentFromNorth){
-                    console.log("sydost");
-                    relativeAngle = 90 + Math.atan(diffLat/diffLong) * (180/Math.PI); // Grader
-                    // relativeAngle = Math.PI * 0.5 + Math.atan(diffLat/diffLong);
-                } else if(!messageSentFromEast && !messageSentFromNorth){
-                    console.log("sydväst");
-                    relativeAngle = 180 + Math.atan(diffLong/diffLat) * (180/Math.PI); // Grader
-                    // relativeAngle = Math.PI + Math.atan(diffLong/diffLat);
-                } else {
-                    console.log("nordväst");
-                    relativeAngle = 270 + Math.atan(diffLat/diffLong) * (180/Math.PI); // Grader
-                    // relativeAngle = Math.PI * 1.5 + Math.atan(diffLat/diffLong);
-                }
-
-                var angleDifference = (Math.abs((message.location.heading - relativeAngle + 180)) % 360) - 180;
-                console.log(angleDifference);
-                if(Math.abs(angleDifference)<45){
-                    // GO TIME!
-                    console.log("You are looking the right way! Very good, do you like what you see? ");
-                } else {
-                    // Fuck you :(
-                    console.log("Fuck you :(");
-                }
-                console.log(message);
-                console.log(position);
-            }, showError);
-
-        console.log("Fick meddelande: " + JSON.stringify(message));
-        if(getObjectSize(message)>2){
-        	$("#output").html($(
-        		"#output").html() + '<br />' + message.data + "<p class='geoData'>Användaren är vid " + message.location.longitude.toFixed(5) + " " + message.location.latitude.toFixed(5) + " och tittar mot " + message.location.heading + "°</p>");
-        };
+var subscribeCallback = function(message){
+    console.log("Fick meddelande: " + JSON.stringify(message));
+    connectedToAChannel = true;
+	messageCount++;
+	if(message.uuid===uuid){ // own message
+		$("#output").html($("#output").html() + '<div class="message user"><p class="messageText">' + message.data + '</p>');
+	}else{
+    	if(messageCount%2===1){ // someone elses message
+    		$("#output").html($("#output").html() + '<div class="message"><p class="messageText">' + message.data + '</p>');
+    	} else{
+    		$("#output").html($("#output").html() + '<div class="message two"><p class="messageText">' + message.data + '</p>');
+    	}
     }
-});
+	scrollToBottom();
+};
 
+var scrollToBottom = function(){
+	var objDiv = document.getElementById("output");
+	objDiv.scrollTop = objDiv.scrollHeight; // scroll chat to bottom when new message arrives
+}
+
+var unsubscribeToChannel = function(channel){
+	pubnub.unsubscribe({
+		channel: "erdick-chat-"+channel
+	})
+}
 
 $(function(){
     $("#input").keyup(function(e){
         if (e.keyCode === 13) {
-            sendMessageWithPos();
+            directionMessage();
         }
     });
 });
 
-var welcomeOnConnect = function() {
-    $("#output").html($("#output").html() + "Ansluten till chatten..");
-};
-
-var sendMessages = function(){
-	if($("#input").val()!=""){
-	    console.log("Skickar: " + $("#input").val());
-	    // send messages
-	    pubnub.publish({
-	        channel : 'tasty-chat',
-	        message : {
-	        	data: $("#input").val(),
-	        	uuid: uuid
-        	},
-	        callback: function(){
-	            console.log("Skickade: " + $("#input").val())
-	            $("#input").val("");
-			},
-	        error: function(e){
-	        	console.log("Något gick snett: "+e);
-	        }
-	        // 'pos'     : pos
-	    });
-	}
-};
-
-var recieveHistory = function(){
+var recieveHistory = function(channel){
 	console.log("Hämtar historik..")
-    // check history
-	$("#output").html("");
+	$("#output").html("<div id='welcomeMessage'>Ansluten till "+channel+"!</div>");
+	// check history
 	pubnub.history({
-		count : 10,
-		channel : 'tasty-chat',
-		callback : function (message) {
-			$("#output").append(message[0].join("<br />"))
+		count : 3,
+		channel : 'erdick-chat-'+channel,
+		reverse: false,
+		callback : function (messages) {
+			console.log(messages);
+			for (message in messages[0]){
+				messageCount++;
+				if(message.uuid===uuid){ // own message
+					$("#output").html($("#output").html() + '<div class="message user"><p class="messageText">' + messages[0][message].data + '</p></div>');
+				}else{
+					if(messageCount%2===1){ // someone elses message
+			    		$("#output").html($("#output").html() + '<div class="message"><p class="messageText">' + messages[0][message].data + '</p></div>');
+			    	} else{
+			    		$("#output").html($("#output").html() + '<div class="message two"><p class="messageText">' + messages[0][message].data + '</p></div>');
+			    	}
+			    }
+			}
+			scrollToBottom();
 		}
 	});
 }
@@ -143,25 +100,23 @@ var sendMessageWithPos = function() {
     }
 }
 
-var locationMessage = function(position) {
+var directionMessage = function(position) {
 	if($("#input").val()!=""){
 		console.log("Skickar: " + $("#input").val());
-		console.log("Från position: lon " + position.coords.longitude + " lat " + position.coords.latitude)
+		console.log("Tittar åt: "+currentChannel);
 	    // send messages
 		pubnub.publish({
-			channel : 'tasty-chat',
+			channel : 'erdick-chat-'+currentChannel,
 			message : {
 	        	data: $("#input").val(),
 	        	uuid: uuid,
-	        	location: {
-	        		longitude: position.coords.longitude,
-	        		latitude: position.coords.latitude,
-	        		heading: userHeading
-        		}
+	        	currentChannel: currentChannel
         	},
 			callback: function(){
 				console.log("Skickade: " + $("#input").val())
+				// $("#output").html($("#output").html() + "Skickade: " + $("#input").val() + " till " + currentChannel);
 				$("#input").val("");
+				scrollToBottom();
 			},
 	        error: function(e){
 	        	console.log("Något gick snett: "+e);
@@ -196,35 +151,81 @@ var getObjectSize = function(obj) {
 };
 
 init();
-var count = 0;
-var userHeading = 0;
+
+var currentChannel = "N";
+
+var whereAmILooking = function(dir){
+	if(!dir){
+		console.log("Enheten har inte stöd för kompassen.");
+		$("#output").html("<div id='welcomeMessage'>Har inget stöd..</div>");
+		subscribeToChannel("N");
+	} else{
+		console.log(dir);
+		if (dir>315 || dir<45){ // Tittar mot norr
+			if(!connectedToAChannel){
+				subscribeToChannel("N");
+			}
+			if(currentChannel!="N"){
+				$("#output").html($("#output").html() + "<div id='welcomeMessage'>Försöker ansluta till N</div>");
+				subscribeToChannel("N");
+				unsubscribeToChannel(currentChannel);
+				
+			}
+			currentChannel="N";
+			return "N";
+		} else if (45<dir && dir<135){ // Tittar mot väst
+			if(!connectedToAChannel){
+				subscribeToChannel("W");
+			}
+			if(currentChannel!="W"){
+				$("#output").html($("#output").html() + "<div id='welcomeMessage'>Försöker ansluta till W</div>");
+				subscribeToChannel("W");
+				unsubscribeToChannel(currentChannel);
+			}
+			currentChannel="W";
+			return "W";
+		} else if (135<dir && dir<225){ // Tittar mot söder
+			if(!connectedToAChannel){
+				subscribeToChannel("S");
+			}
+			if(currentChannel!="S"){
+				$("#output").html($("#output").html() + "<div id='welcomeMessage'>Försöker ansluta till S</div>");
+				subscribeToChannel("S");
+				unsubscribeToChannel(currentChannel);
+			}
+			currentChannel="S";
+			return "S";
+		} else if (225<dir && dir<315){ // Tittar mot öst
+			if(!connectedToAChannel){
+				subscribeToChannel("E");
+			}
+			if(currentChannel!="E"){
+				$("#output").html($("#output").html() + "<div id='welcomeMessage'>Försöker ansluta till E</div>");
+				subscribeToChannel("E");
+				unsubscribeToChannel(currentChannel);
+			}
+			currentChannel="E";
+			return "E";
+		}
+	}
+}
 
 function init() {
   if (window.DeviceOrientationEvent) {
     // Listen for the deviceorientation event and handle the raw data
-    window.addEventListener('deviceorientation', function(eventData) {
-      // // gamma is the left-to-right tilt in degrees, where right is positive
-      // var tiltLR = eventData.gamma;
-      
-      // // beta is the front-to-back tilt in degrees, where front is positive
-      // var tiltFB = eventData.beta;
-      
-      // alpha is the compass direction the device is facing in degrees
-      var dir = eventData.alpha
-      
-      // call our orientation event handler
-      deviceOrientationHandler(dir);
+    window.addEventListener('deviceorientation', function(eventData) {      
+      deviceOrientationHandler(eventData.alpha); // call our orientation event handler
       }, false);
   }
 }
 
-function deviceOrientationHandler(dir) {
-  document.getElementById("heading").innerHTML = Math.round(dir);
+function deviceOrientationHandler(alpha) {
+  document.getElementById("heading").innerHTML = Math.round(alpha)+currentChannel;
   
   // Apply the transform to the image
-  var logo = document.getElementById("compass");
-  logo.style.webkitTransform = "rotate("+ dir +"deg)";
-  logo.style.MozTransform = "rotate("+ dir +"deg)";
-  logo.style.transform = "rotate("+ dir +"deg)";
-  userHeading = dir;
+  // var logo = document.getElementById("compass");
+  // logo.style.webkitTransform = "rotate("+ alpha +"deg)";
+  // logo.style.MozTransform = "rotate("+ alpha +"deg)";
+  // logo.style.transform = "rotate("+ alpha +"deg)";
+  userCardinalDirection = whereAmILooking(alpha);
 }
