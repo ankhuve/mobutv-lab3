@@ -41,12 +41,13 @@ nav{
 }
 
 #heading{
-	line-height: 10vw;
+	line-height: 10vh;
+	font-size: 3vh;
 	position: absolute;
 	color: white; 
-	width: 10vw;
-	height: 10vw;
-	border-radius: 10vw;
+	width: 10vh;
+	height: 10vh;
+	border-radius: 10vh;
 	background-color: black;
 	top: 2vh;
 	right: 2vh;

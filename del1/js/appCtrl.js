@@ -24,7 +24,7 @@ var subscribeToChannel = function(direction){
 	      $("#output").html("Kunde inte ansluta till chatten :(");
 	      console.log(JSON.stringify(error));
 	    },
-		callback  : function(message) {
+		message  : function(message) {
 			subscribeCallback(message);
 		}
 	});
@@ -114,7 +114,6 @@ var directionMessage = function(position) {
         	},
 			callback: function(){
 				console.log("Skickade: " + $("#input").val())
-				// $("#output").html($("#output").html() + "Skickade: " + $("#input").val() + " till " + currentChannel);
 				$("#input").val("");
 				scrollToBottom();
 			},
@@ -149,15 +148,16 @@ var getObjectSize = function(obj) {
     }
     return size;
 };
+var currentChannel = "N";
 
 init();
 
-var currentChannel = "N";
+
 
 var whereAmILooking = function(dir){
-	if(!dir){
+	if(dir===null){
 		console.log("Enheten har inte stöd för kompassen.");
-		$("#output").html("<div id='welcomeMessage'>Har inget stöd..</div>");
+		$("#output").html($("#output").html() + "<div id='welcomeMessage'>Har inget stöd..</div>");
 		subscribeToChannel("N");
 	} else{
 		console.log(dir);
@@ -221,11 +221,5 @@ function init() {
 
 function deviceOrientationHandler(alpha) {
   document.getElementById("heading").innerHTML = Math.round(alpha)+currentChannel;
-  
-  // Apply the transform to the image
-  // var logo = document.getElementById("compass");
-  // logo.style.webkitTransform = "rotate("+ alpha +"deg)";
-  // logo.style.MozTransform = "rotate("+ alpha +"deg)";
-  // logo.style.transform = "rotate("+ alpha +"deg)";
   userCardinalDirection = whereAmILooking(alpha);
 }
